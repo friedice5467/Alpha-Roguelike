@@ -2,8 +2,7 @@ import tdl
 from random import randint
 import math
 import colors
-import combat_prop
-import AI
+
 
 #windowed size
 SCREEN_WIDTH = 80
