@@ -3,16 +3,20 @@ from random import randint
 import math
 import colors
 
-
 #windowed size
 SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 50
 
 LIMIT_FPS = 20  #limits the fps to 20 frames per second
 
+#sizes and coordinates relevant for the GUI
+BAR_WIDTH = 20
+PANEL_HEIGHT = 7
+PANEL_Y = SCREEN_HEIGHT - PANEL_HEIGHT
+
 #size of the map
 MAP_WIDTH = 80
-MAP_HEIGHT = 45
+MAP_HEIGHT = 43
 
 #parameters for dungeon generator
 ROOM_MAX_SIZE = 10
@@ -359,6 +363,22 @@ def place_objects(room):
 
             objects.append(monster)
 
+def render_bar (x, y, total_width, name, value, maximum, bar_color, back_color):
+    #rendar a bar(HP, EXP, etc). first calculate the width of the bar
+    bar_width = int(float(value) / maximum * total_width)
+
+    #render the background first
+    panel.draw_rect(x, y, total_width, 1, None, bg=back_color)
+
+    #now render the bar on top
+    if bar_width >0:
+        panel.draw_rect (x, y, bar_width, 1, None, bg=bar_color)
+
+    #finally, some centered text with the values
+    text = name + ': ' + str(value) + '/' + str(maximum)
+    x_centered = x + (total_width-len(text))//2
+    panel.draw_str(x_centered, y, text, fg=colors.white, bg=None)
+
 
 def render_all():
     global fov_recompute
@@ -405,10 +425,17 @@ def render_all():
     #blit the contents of "con" to the root console and present it
     root.blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0)
 
+    #prepare to render the GUI panel
+    panel.clear(fg=colors.white, bg=colors.black)
+ 
     #show the player's stats
-    #show the player's stats
-    con.draw_str(1, SCREEN_HEIGHT - 2, 'HP: ' + str(player.fighter.hp) + '/' + 
-                 str(player.fighter.max_hp) + ' ')
+    render_bar(1, 1, BAR_WIDTH, 'HP', player.fighter.hp, player.fighter.max_hp,
+        colors.light_red, colors.darker_red)
+ 
+    #blit the contents of "panel" to the root console
+    root.blit(panel, 0, PANEL_Y, SCREEN_WIDTH, PANEL_HEIGHT, 0, 0)
+
+    
 
 def is_blocked(x, y):
     #first test the map tile
@@ -539,6 +566,7 @@ root = tdl.init(SCREEN_WIDTH, SCREEN_HEIGHT, title="Alpha", fullscreen=False)
 tdl.set_fps(LIMIT_FPS)
 con = tdl.Console(SCREEN_WIDTH, SCREEN_HEIGHT)
 
+panel = tdl.Console(SCREEN_WIDTH, SCREEN_HEIGHT)
 
 #create object representing the player
 fighter_component = Fighter(hp=30, mp=10, defense=2, power=5, agility=2, death_function=player_death)
