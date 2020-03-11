@@ -185,7 +185,8 @@ class Fighter:
     def heal(self, amount):
         #heal by the given amount without going over the maximum
         self.hp += (self.max_hp//amount)
-        message('Healed by ' + str(self.max_hp//amount) + ' HP!')
+        if self.hp < self.max_hp:
+            message('Healed by ' + str(self.max_hp//amount) + ' HP!', colors.green)
         if self.hp > self.max_hp:
             self.hp = self.max_hp
             message('HP is full!', colors.green)
@@ -802,4 +803,3 @@ while not tdl.event.is_window_closed():
             if obj.ai:
                 obj.ai.take_turn()
  
-
