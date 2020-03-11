@@ -22,12 +22,17 @@ PANEL_Y = SCREEN_HEIGHT - PANEL_HEIGHT
 MSG_X = BAR_WIDTH + 2
 MSG_WIDTH = SCREEN_WIDTH - BAR_WIDTH - 2
 MSG_HEIGHT = PANEL_HEIGHT - 1
+INVENTORY_WIDTH = 50
 
 #parameters for dungeon generator
 ROOM_MAX_SIZE = 10
 ROOM_MIN_SIZE = 6
 MAX_ROOMS = 30
 MAX_ROOM_MONSTERS = 3
+MAX_ROOM_ITEMS = 2
+
+#the amount of health healed
+HEAL_AMOUNT = 3
 
 #FOV
 FOV_ALGO = 'BASIC'
@@ -79,7 +84,7 @@ class GameObject:
     #this is a generic object: the player, a monster, an item, the stairs...
     #it's always represented by a character on screen.
     def __init__(self, x, y, char, name, color, blocks=False, 
-                 fighter=None, ai=None):
+                 fighter=None, ai=None, item=None):
         self.x = x
         self.y = y
         self.char = char
@@ -95,6 +100,10 @@ class GameObject:
         if self.ai:  #let the AI component know who owns it
             self.ai.owner = self
  
+        self.item = item
+        if self.item: #let the Item component know who owsn it
+            self.item.owner = self
+
     def move(self, dx, dy):
         #move by the given amount, if the destination is not blocked
         if not is_blocked(self.x + dx, self.y + dy):
@@ -173,6 +182,15 @@ class Fighter:
             print(self.owner.name.capitalize() + ' attacks ' + target.name + 
                   ' but it has no effect!')
 
+    def heal(self, amount):
+        #heal by the given amount without going over the maximum
+        self.hp += (self.max_hp//amount)
+        message('Healed by ' + str(self.max_hp//amount) + ' HP!')
+        if self.hp > self.max_hp:
+            self.hp = self.max_hp
+            message('HP is full!', colors.green)
+
+
 class BasicMonster:
     #AI for a basic monster.
     def take_turn(self):
@@ -187,6 +205,29 @@ class BasicMonster:
             #close enough, attack! (if the player is still alive.)
             elif player.fighter.hp > 0:
                 monster.fighter.attack(player)
+
+class Item:
+    def __init__(self, use_function=None):
+        self.use_function = use_function
+
+
+    #an item that can be picked up and used.
+    def pick_up(self):
+        #add to the player's inventory and remove from the map
+        if len(inventory) >= 26:
+            message('Your inventory is full, cannot pick up ' + self.owner.name + '.', colors.red)
+        else:
+            inventory.append(self.owner)
+            objects.remove(self.owner)
+            message('You picked up a ' + self.owner.name + '!', colors.green)
+            
+    def use(self):
+        #just call the "use_function" if it is defined
+        if self.use_function is None:
+            message('The ' + self.owner.name + ' cannot be used.')
+        else:
+            if self.use_function() != 'cancelled':
+                inventory.remove(self.owner)  #destroy after use, unless it was cancelled for some reason
 
 def is_blocked(x, y):
     #first test the map tile
@@ -309,8 +350,8 @@ def place_objects(room):
         
     for i in range(num_monsters):
         #choose random spot for this monster
-        x = randint(room.x1, room.x2)
-        y = randint(room.y1, room.y2)
+        x = randint(room.x1+1, room.x2-1)
+        y = randint(room.y1+1, room.y2-1)
         
         choice = randint(0, 100)
         #only place it if the tile is not blocked
@@ -374,6 +415,24 @@ def place_objects(room):
 
             objects.append(monster)
 
+    #choose random number of items
+    num_items = randint(0, MAX_ROOM_ITEMS)
+
+    for i in range(num_items):
+        #choose random spot for this item
+        x = randint(room.x1+1, room.x2-1)
+        y = randint(room.y1+1, room.y2-1)
+
+        #only place it if the tile is not blocked
+        if not is_blocked(x, y):
+            #create a healing potion
+            item_component = Item(use_function=cast_heal)
+            item = GameObject(x, y, '!', 'healing potion', colors.violet, item=item_component)
+
+            objects.append(item)
+            item.send_to_back() #items appear below other objects
+
+
 def render_bar (x, y, total_width, name, value, maximum, bar_color, back_color):
     #rendar a bar(HP, EXP, etc). first calculate the width of the bar
     bar_width = int(float(value) / maximum * total_width)
@@ -402,6 +461,65 @@ def get_names_under_mouse():
     #join the names, separated by commas
     names = ', '.join(names)
     return names.capitalize()
+
+def menu(header, options, width):
+    if len(options) > 26: raise ValueError('Cannot have a menu with more than 26 options.')
+
+    #calculate total height for the header (after textwrap) and one line per option
+    header_wrapped = []
+    for header_line in header.splitlines():
+        header_wrapped.extend(textwrap.wrap(header_line, width))
+    header_height = len(header_wrapped)
+    height = len(options) + header_height
+
+    #create an offscreen console that represents the menu's window
+    window = tdl.Console(width, height)
+
+    #print the header, with wrapped text
+    window.draw_rect(0, 0, width, height, None, fg=colors.white, bg=None)
+    for i, line in enumerate(header_wrapped):
+        window.draw_str(0, 0+i, header_wrapped[i])
+
+    #inventory options
+    y = header_height
+    letter_index = ord('a')
+    for option_text in options:
+        text = '(' + chr(letter_index) + ') ' + option_text
+        window.draw_str(0, y, text, bg=None)
+        y += 1
+        letter_index += 1
+
+    #blit the contents of "window" to the root console
+    x = SCREEN_WIDTH//2 - width//2
+    y = SCREEN_HEIGHT//2 - height//2
+    root.blit(window, x, y, width, height, 0, 0)
+
+    #present the root console to the player and wait for a key-press
+    tdl.flush()
+    key = tdl.event.key_wait()
+    key_char = key.char
+    if key_char == '':
+        key_char = ' ' # placeholder
+ 
+    #convert the ASCII code to an index; if it corresponds to an option, return it
+    index = ord(key_char) - ord('a')
+    if index >= 0 and index < len(options):
+        return index
+    return None
+
+
+def inventory_menu(header):
+    #show a menu with each item of the inventory as an option
+    if len(inventory) == 0:
+        options = ['Inventory is empty.']
+    else:
+        options = [item.name for item in inventory]
+
+    index = menu(header, options, INVENTORY_WIDTH)
+
+    #if an item was chosen, return it
+    if index is None or len(inventory) == 0: return None
+    return inventory[index].item
 
 def render_all():
     global fov_recompute
@@ -578,6 +696,21 @@ def handle_keys():
             player_move_or_attack(1,1)
             
         else:
+            #test for other keys
+            if user_input.text == 'g' :
+                #pick up an item
+                for obj in objects: #look for an item on the players tile
+                    if obj.x == player.x and obj.y == player.y and obj.item:
+                        obj.item.pick_up()
+                        break
+
+            
+            if user_input.text == 'i':
+                #show the inventory; if an item is selected, use it
+                chosen_item = inventory_menu('Press the key next to an item to use it, or any other to cancel.\n')
+                if chosen_item is not None:
+                    chosen_item.use()
+
             return 'didnt-take-turn'
 
 
@@ -602,6 +735,14 @@ def monster_death(monster):
     monster.ai = None
     monster.name = 'remains of ' + monster.name
     monster.send_to_back()
+
+def cast_heal():
+    #heal the player
+    if player.fighter.hp == player.fighter.max_hp:
+        message('You are already at full health.', colors.red)
+        return 'cancelled'
+ 
+    player.fighter.heal(HEAL_AMOUNT)
 
 #############################################
 # Initialization & Main Loop                #
@@ -630,6 +771,9 @@ player_action = None
 
 #create the list of game messages and their colors, start empty
 game_msgs = []
+
+#creates an inventory
+inventory = []
 
 #a warm welcoming message!
 message('Welcome stranger! Prepare to perish in the Tombs of the Ancient Kings.', colors.red)
