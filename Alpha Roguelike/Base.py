@@ -2,52 +2,61 @@ import tdl
 from random import randint
 import math
 import colors
+import textwrap
+#import combat_prop
+#import AI
 
 #windowed size
 SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 50
 
-LIMIT_FPS = 20  #limits the fps to 20 frames per second
+#size of the map
+MAP_WIDTH = 80
+MAP_HEIGHT = 43
+
 
 #sizes and coordinates relevant for the GUI
 BAR_WIDTH = 20
 PANEL_HEIGHT = 7
 PANEL_Y = SCREEN_HEIGHT - PANEL_HEIGHT
-
-#size of the map
-MAP_WIDTH = 80
-MAP_HEIGHT = 43
+MSG_X = BAR_WIDTH + 2
+MSG_WIDTH = SCREEN_WIDTH - BAR_WIDTH - 2
+MSG_HEIGHT = PANEL_HEIGHT - 1
 
 #parameters for dungeon generator
 ROOM_MAX_SIZE = 10
 ROOM_MIN_SIZE = 6
 MAX_ROOMS = 30
+MAX_ROOM_MONSTERS = 3
 
 #FOV
 FOV_ALGO = 'BASIC'
 FOV_LIGHT_WALLS = True
 TORCH_RADIUS = 10
 
+LIMIT_FPS = 20  #limits the fps to 20 frames per second
+
 color_dark_wall = (0, 0, 100)
 color_light_wall = (130, 110, 50)
 color_dark_ground = (50, 50, 150)
 color_light_ground = (200, 180, 50)
 
-#max monster per room
-MAX_ROOM_MONSTERS = 3
 
 
 
 class Tile:
     #a tile of the map and its properties
-    def __init__(self, blocked, block_sight = None):
-        self.blocked = blocked    
+    def __init__(self, blocked, block_sight=None):
+        self.blocked = blocked
+ 
+        #all tiles start unexplored
         self.explored = False
-    #by default, if a tile is blocked, it also blocks sight
+ 
+        #by default, if a tile is blocked, it also blocks sight
         if block_sight is None: 
             block_sight = blocked
         self.block_sight = block_sight
-
+ 
 class Rect:
     #a rectangle on the map. used to characterize a room.
     def __init__(self, x, y, w, h):
@@ -55,7 +64,7 @@ class Rect:
         self.y1 = y
         self.x2 = x + w
         self.y2 = y + h
-
+ 
     def center(self):
         center_x = (self.x1 + self.x2) // 2
         center_y = (self.y1 + self.y2) // 2
@@ -69,7 +78,8 @@ class Rect:
 class GameObject:
     #this is a generic object: the player, a monster, an item, the stairs...
     #it's always represented by a character on screen.
-    def __init__(self, x, y, char, name, color, blocks=False, fighter= None, ai= None):
+    def __init__(self, x, y, char, name, color, blocks=False, 
+                 fighter=None, ai=None):
         self.x = x
         self.y = y
         self.char = char
@@ -77,6 +87,7 @@ class GameObject:
         self.name = name
         self.blocks = blocks
         self.fighter = fighter
+ 
         if self.fighter:  #let the fighter component know who owns it
             self.fighter.owner = self
  
@@ -89,9 +100,9 @@ class GameObject:
         if not is_blocked(self.x + dx, self.y + dy):
             self.x += dx
             self.y += dy
-
+ 
     def move_towards(self, target_x, target_y):
-        #vector from this object to the target, and distance; AI movement
+        #vector from this object to the target, and distance
         dx = target_x - self.x
         dy = target_y - self.y
         distance = math.sqrt(dx ** 2 + dy ** 2)
@@ -101,12 +112,18 @@ class GameObject:
         dx = int(round(dx / distance))
         dy = int(round(dy / distance))
         self.move(dx, dy)
-
+ 
     def distance_to(self, other):
         #return the distance to another object
         dx = other.x - self.x
         dy = other.y - self.y
         return math.sqrt(dx ** 2 + dy ** 2)
+ 
+    def send_to_back(self):
+        #make this object be drawn first, so all others appear above it if they're in the same tile.
+        global objects
+        objects.remove(self)
+        objects.insert(0, self)
  
     def draw(self):
         global visible_tiles
@@ -115,12 +132,6 @@ class GameObject:
         if (self.x, self.y) in visible_tiles:
             #draw the character that represents this object at its position
             con.draw_char(self.x, self.y, self.char, self.color, bg=None)
-
-    def send_to_back(self):
-        #make this object be drawn first, so all others appear above it if they're in the same tile.
-        global objects
-        objects.remove(self)
-        objects.insert(0, self)
  
     def clear(self):
         #erase the character that represents this object
@@ -378,7 +389,19 @@ def render_bar (x, y, total_width, name, value, maximum, bar_color, back_color):
     text = name + ': ' + str(value) + '/' + str(maximum)
     x_centered = x + (total_width-len(text))//2
     panel.draw_str(x_centered, y, text, fg=colors.white, bg=None)
-
+    
+def get_names_under_mouse():
+ 
+    #return a string with the names of all objects under the mouse
+    (x, y) = mouse_coord
+ 
+    #create a list with the names of all objects at the mouse's coordinates and in FOV
+    names = [obj.name for obj in objects
+        if obj.x == x and obj.y == y and (obj.x, obj.y) in visible_tiles]
+ 
+    #join the names, separated by commas
+    names = ', '.join(names)
+    return names.capitalize()
 
 def render_all():
     global fov_recompute
@@ -427,15 +450,22 @@ def render_all():
 
     #prepare to render the GUI panel
     panel.clear(fg=colors.white, bg=colors.black)
+
+    #print the game messages, one line at a time
+    y = 1
+    for (line, color) in game_msgs:
+        panel.draw_str(MSG_X, y, line, bg=None, fg=color)
+        y += 1
  
     #show the player's stats
     render_bar(1, 1, BAR_WIDTH, 'HP', player.fighter.hp, player.fighter.max_hp,
         colors.light_red, colors.darker_red)
+
+    #display names of objects under the mouse
+    panel.draw_str(1, 0, get_names_under_mouse(), bg=None, fg=colors.light_gray)
  
     #blit the contents of "panel" to the root console
     root.blit(panel, 0, PANEL_Y, SCREEN_WIDTH, PANEL_HEIGHT, 0, 0)
-
-    
 
 def is_blocked(x, y):
     #first test the map tile
@@ -448,6 +478,18 @@ def is_blocked(x, y):
             return True
  
     return False
+
+def message(new_msg, color = colors.white):
+    #split the message if necessary, among multiple lines
+    new_msg_lines = textwrap.wrap(new_msg, MSG_WIDTH)
+ 
+    for line in new_msg_lines:
+        #if the buffer is full, remove the first line to make room for the new one
+        if len(game_msgs) == MSG_HEIGHT:
+            del game_msgs[0]
+ 
+        #add the new line as a tuple, with the text and the color
+        game_msgs.append((line, color))
 
 def player_move_or_attack(dx, dy):
     global fov_recompute
@@ -473,21 +515,19 @@ def player_move_or_attack(dx, dy):
 def handle_keys():
     global playerx, playery
     global fov_recompute
-
-    '''
-    #realtime
+    global mouse_coord
  
     keypress = False
     for event in tdl.event.get():
         if event.type == 'KEYDOWN':
-           user_input = event
-           keypress = True
+            user_input = event
+            keypress = True
+        if event.type == 'MOUSEMOTION':
+            mouse_coord = event.cell
+ 
     if not keypress:
-        return
-    '''
-
-    user_input = tdl.event.key_wait()
-
+        return 'didnt-take-turn' #TODO: Add to tutorial
+ 
     if user_input.key == 'ENTER' and user_input.alt:
         #Alt+Enter: toggle fullscreen
         tdl.set_fullscreen(not tdl.get_fullscreen())
@@ -495,27 +535,33 @@ def handle_keys():
     elif user_input.key == 'ESCAPE':
         return 'exit'  #exit game
 
+    if game_state == 'playing':
+        #movement keys
+        if user_input.key == 'UP' :
+            player.move(0, -1)
+            fov_recompute = True
 
-    #let monsters take a turn, debug msg
-    if game_state == 'playing' and player_action != 'didnt-take-turn':
-        for obj in objects:
-            if obj != player:
-                print('The ' + obj.name + ' growls!')
-        #movement keys turnbased
-        if user_input.key == 'UP':
-            player_move_or_attack(0, -1)
         elif user_input.key == 'KP8':
             player_move_or_attack(0, -1)
+
         elif user_input.key == 'DOWN' :
-            player_move_or_attack(0, 1)
+            player.move(0, 1)
+            fov_recompute = True
+
         elif user_input.key == 'KP2' :
             player_move_or_attack(0, 1)
+
         elif user_input.key == 'LEFT' :
-            player_move_or_attack(-1, 0)
+            player.move(-1, 0)
+            fov_recompute = True
+
         elif user_input.key == 'KP4' :
             player_move_or_attack(-1, 0)
+
         elif user_input.key == 'RIGHT' :
-            player_move_or_attack(1,0)
+            player.move(1, 0)
+            fov_recompute = True
+
         elif user_input.key == 'KP6' :
             player_move_or_attack(1,0)
         #diagonal movement
@@ -563,9 +609,8 @@ def monster_death(monster):
 
 tdl.set_font('C:\\Users\\danny\\Documents\\___Python Learning Coding\\Game\\Alpha Roguelike\\dejavu_wide16x16_gs_tc.png', greyscale=True, altLayout=True)
 root = tdl.init(SCREEN_WIDTH, SCREEN_HEIGHT, title="Alpha", fullscreen=False)
-tdl.set_fps(LIMIT_FPS)
+tdl.setFPS(LIMIT_FPS)
 con = tdl.Console(SCREEN_WIDTH, SCREEN_HEIGHT)
-
 panel = tdl.Console(SCREEN_WIDTH, SCREEN_HEIGHT)
 
 #create object representing the player
@@ -578,27 +623,36 @@ objects = [player]
 #generates map
 make_map()
 
+
 fov_recompute = True
 game_state = 'playing'
 player_action = None
 
+#create the list of game messages and their colors, start empty
+game_msgs = []
+
+#a warm welcoming message!
+message('Welcome stranger! Prepare to perish in the Tombs of the Ancient Kings.', colors.red)
+
+mouse_coord= (0, 0)
+
 while not tdl.event.is_window_closed():
-    #print('go')
-
-    #draws all objects in the list
+ 
+    #draw all objects in the list
     render_all()
-
+ 
     tdl.flush()
-
+ 
     #erase all objects at their old locations, before they move
     for obj in objects:
         obj.clear()
-    
+ 
     #handle keys and exit game if needed
     player_action = handle_keys()
     if player_action == 'exit':
         break
-
+ 
+    #let monsters take their turn
     if game_state == 'playing' and player_action != 'didnt-take-turn':
         for obj in objects:
             if obj.ai:
