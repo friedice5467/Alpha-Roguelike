@@ -354,60 +354,60 @@ def place_objects(room):
         x = randint(room.x1+1, room.x2-1)
         y = randint(room.y1+1, room.y2-1)
         
-        choice = randint(0, 100)
+        choice = randint(0, 1000)
         #only place it if the tile is not blocked
         if not is_blocked(x, y):
-            if choice < 25: 
+            if choice < 300: 
                 #create an orc at 25% chance
                 fighter_component = Fighter(hp=10, mp=5, defense=0, power=3, agility= 1, death_function=monster_death)
                 ai_component = BasicMonster()
 
                 monster = GameObject(x,y, 'o', 'orc', colors.desaturated_green, 
                                     blocks=True, fighter=fighter_component, ai=ai_component)
-            elif choice < 25+50:
+            elif choice < 300+500:
                 #create a goblin at 50% chance
-                fighter_component = Fighter(hp=4, mp=5, defense=0, power=2, agility= 2, death_function=monster_death)
+                fighter_component = Fighter(hp=4, mp=5, defense=0, power=3, agility= 2, death_function=monster_death)
                 ai_component = BasicMonster()
 
                 monster = GameObject(x, y, 'g', 'goblin', colors.light_green, 
                                     blocks=True, fighter=fighter_component, ai=ai_component)
-            elif choice < 25+50+5:
+            elif choice < 300+500+50:
                 #create a uruk at 5% chance
                 fighter_component = Fighter(hp=15, mp=5, defense=1, power=3, agility= 1, death_function=monster_death)
                 ai_component = BasicMonster()
 
                 monster = GameObject(x, y, 'u', 'uruk', colors.green, 
                                     blocks=True, fighter=fighter_component, ai=ai_component)
-            elif choice < 25+50+5+10:
+            elif choice < 300+500+50+100:
                 #create a greater goblin at 10% chance
                 fighter_component = Fighter(hp=8, mp=5, defense=0, power=3, agility= 2, death_function=monster_death)
                 ai_component = BasicMonster()
 
                 monster = GameObject(x, y, 'G', 'greater goblin', colors.light_green,
                                     blocks=True, fighter=fighter_component, ai=ai_component)
-            elif choice < 25+50+5+10+5:
-                #create a ogre at 5% chance
+            elif choice < 300+500+50+100+30:
+                #create a ogre at 3% chance
                 fighter_component = Fighter(hp=12, mp=5, defense=2, power=3, agility= 1, death_function=monster_death)
                 ai_component = BasicMonster()
 
                 monster = GameObject(x, y, 'r', 'ogre', colors.desaturated_amber, 
                                     blocks=True, fighter=fighter_component, ai=ai_component)
-            elif choice < 25+50+5+10+5+2:
-                #create a cyclops at 2% chance
+            elif choice < 300+500+50+100+30+8:
+                #create a cyclops at .8% chance
                 fighter_component = Fighter(hp=15, mp=5, defense=1, power=4, agility= 1, death_function=monster_death)
                 ai_component = BasicMonster()
 
                 monster = GameObject(x, y, 'c', 'cyclops', colors.desaturated_yellow, 
                                     blocks=True, fighter=fighter_component, ai=ai_component)
-            elif choice < 25+50+5+10+5+2:
-                #create a troll at 2% chance
+            elif choice < 300+500+50+100+30+8+8:
+                #create a troll at .8% chance
                 fighter_component = Fighter(hp=16, mp=5, defense=1, power=4, agility= 1, death_function=monster_death)
                 ai_component = BasicMonster()
 
                 monster = GameObject(x, y, 'T', 'Troll', colors.darkest_green, 
                                     blocks=True, fighter=fighter_component, ai=ai_component)
             else:
-                #create a dragon at 1% chance
+                #create a dragon at .4% chance
                 fighter_component = Fighter(hp=30, mp=5, defense=3, power=5, agility= 3, death_function=monster_death)
                 ai_component = BasicMonster()
 
