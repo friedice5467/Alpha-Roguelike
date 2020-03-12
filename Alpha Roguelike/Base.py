@@ -34,6 +34,15 @@ MAX_ROOM_ITEMS = 2
 #the amount of health healed
 HEAL_AMOUNT = 3
 
+#spell stats/status
+CONFUSE_NUM_TURNS = 10
+CONFUSE_RANGE = 8
+LIGHTNING_DAMAGE = 20
+LIGHTNING_RANGE = 5
+FIRE_BREATH_DAMAGE = 12
+FIRE_BREATH_CHARGE = 0
+FIRE_BREATH_RANGE = 6
+
 #FOV
 FOV_ALGO = 'BASIC'
 FOV_LIGHT_WALLS = True
@@ -191,21 +200,80 @@ class Fighter:
             self.hp = self.max_hp
             message('HP is full!', colors.green)
 
+            
+
 
 class BasicMonster:
     #AI for a basic monster.
+    def __init__(self):
+        self.state = 'basic'
+
     def take_turn(self):
         #a basic monster takes its turn. If you can see it, it can see you
         monster = self.owner
-        if (monster.x, monster.y) in visible_tiles:
+        if self.state == 'basic':
+            if (monster.x, monster.y) in visible_tiles:
+    
+                #move towards player if far away
+                if monster.distance_to(player) >= 2:
+                    monster.move_towards(player.x, player.y)
+    
+                #close enough, attack! (if the player is still alive.)
+                elif player.fighter.hp > 0:
+                    monster.fighter.attack(player)
+
+class DragonAI:
+    def __init__(self):
+        self.state = 'chasing'
+
+    def take_turn(self):
+        monster = self.owner
+        dice = randint(0, 100)
+
+        #50% chance of charging fire breath, 50% chance of chase
+        if dice < 50:
+            self.state = 'charging-fire-breath'
+        else:
+            self.state = 'chasing'
+
+            if (monster.x, monster.y) in visible_tiles:
+                #if player steps within 6 distance of monster, action occurs
+                if monster.distance_to(player) <= 6:
+                                                        
+                    if self.state == 'chasing':
+                        #move towards player if far away
+                        if monster.distance_to(player) >= 2:
+                            monster.move_towards(player.x, player.y)
+
+                        #close enough, attack! (if the player is still alive.)
+                        elif player.fighter.hp > 0:
+                            monster.fighter.attack(player)
+
+                    if self.state =='charging-fire-breath':
+                        FIRE_BREATH_CHARGE += 1
+
+                        if FIRE_BREATH_CHARGE == 2:
+                            FIRE_BREATH_CHARGE -= 2
+
+
+
+class ConfusedMonster:
+    #AI for a temporarily confused monster (reverts to previous AI after a while).
+    def __init__(self, old_ai, num_turns=CONFUSE_NUM_TURNS):
+        self.old_ai = old_ai
+        self.num_turns = num_turns
+        self.state = 'confused'
  
-            #move towards player if far away
-            if monster.distance_to(player) >= 2:
-                monster.move_towards(player.x, player.y)
- 
-            #close enough, attack! (if the player is still alive.)
-            elif player.fighter.hp > 0:
-                monster.fighter.attack(player)
+    def take_turn(self):
+        if self.state == 'confused':
+            if self.num_turns > 0:  #still confused...
+                #move in a random direction, and decrease the number of turns confused
+                self.owner.move(randint(-1, 1), randint(-1, 1))
+                self.num_turns -= 1
+    
+            else:  #restore the previous AI (this one will be deleted because it's not referenced anymore)
+                self.owner.ai = self.old_ai
+                message('The ' + self.owner.name + ' is no longer confused!', colors.red)  
 
 class Item:
     def __init__(self, use_function=None):
@@ -409,7 +477,7 @@ def place_objects(room):
             else:
                 #create a dragon at .4% chance
                 fighter_component = Fighter(hp=30, mp=5, defense=3, power=5, agility= 3, death_function=monster_death)
-                ai_component = BasicMonster()
+                ai_component = DragonAI()
 
                 monster = GameObject(x, y, 'D', 'Dragon', colors.red, 
                                     blocks=True, fighter=fighter_component, ai=ai_component)
@@ -426,12 +494,25 @@ def place_objects(room):
 
         #only place it if the tile is not blocked
         if not is_blocked(x, y):
-            #create a healing potion
-            item_component = Item(use_function=cast_heal)
-            item = GameObject(x, y, '!', 'healing potion', colors.violet, item=item_component)
+            item_dice = randint(0, 1000)
+            if item_dice < 700:
+                #create a healing potion (70%)
+                item_component = Item(use_function=cast_heal)
+ 
+                item = GameObject(x, y, '!', 'healing potion', colors.violet, item=item_component)
+            elif item_dice < 700 + 150:
+                #create a lightning bolt scroll (15%)
+                item_component = Item(use_function = cast_lightning)
 
-            objects.append(item)
-            item.send_to_back() #items appear below other objects
+                item = GameObject(x, y, '#', 'scroll of lightning bolt', colors.light_yellow, item=item_component)
+            else:
+                #create a confuse scroll (15% chance)
+                item_component = Item(use_function=cast_confuse)
+ 
+                item = GameObject(x, y, '#', 'scroll of confusion', colors.light_yellow, item=item_component)
+
+                objects.append(item)
+                item.send_to_back() #items appear below other objects
 
 
 def render_bar (x, y, total_width, name, value, maximum, bar_color, back_color):
@@ -714,6 +795,34 @@ def handle_keys():
 
             return 'didnt-take-turn'
 
+def closest_monster(max_range):
+    #find closest enemy, up to a maximum range, and in the player's FOV
+    closest_enemy = None
+    closest_dist = max_range + 1  #start with (slightly more than) maximum range
+ 
+    for obj in objects:
+        if obj.fighter and not obj == player and (obj.x, obj.y) in visible_tiles:
+            #calculate distance between this object and the player
+            dist = player.distance_to(obj)
+            if dist < closest_dist:  #it's closer
+                closest_enemy = obj
+                closest_dist = dist
+    return closest_enemy
+
+def closest_player_as_dragon(max_range):
+    #find closest player(you)
+    closest_player = None
+    closest_dist = max_range + 1    #start withy extra range
+
+    for obj in objects:
+        if obj.fighter and not obj == DragonAI and (obj.x, obj.y) in visible_tiles:
+            #calculate distance between object and the monster
+            dist = DragonAI.distance_to(obj)
+            if dist < closest_dist: #closer
+                closest_player = obj
+                closest_dist = dist
+    return closest_player
+
 
 def player_death(player):
     #the game ended!
@@ -744,6 +853,45 @@ def cast_heal():
         return 'cancelled'
  
     player.fighter.heal(HEAL_AMOUNT)
+
+def cast_lightning():
+    #find closest enemy (inside max range) and damage it
+    monster = closest_monster(LIGHTNING_RANGE)
+    if monster is None:
+        message('No enemy is close enough to strike.', colors.red)
+        return 'cancelled'
+
+    #zap it
+    message('A lighting bolt strikes the ' + monster.name + ' with a loud thunder! The damage is '
+        + str(LIGHTNING_DAMAGE) + ' hit points.', colors.light_blue)
+    monster.fighter.take_damage(LIGHTNING_DAMAGE)
+
+def cast_confuse():
+    #find the closest enemy in rage and confuse it
+    monster = closest_monster(CONFUSE_RANGE)
+    if monster is None: #no enemy found in range
+        message('No enemy is close enough to confuse.', colors.red)
+        return 'cancelled'
+
+    #replace the monster's AI with a "confused" one; after some turns it will restore the old AI
+    old_ai = monster.ai
+    monster.ai = ConfusedMonster(old_ai)
+    monster.ai.owner = monster  #tell the new component who owns it
+    message('The eyes of the ' + monster.name + ' look vacant, as he starts to stumble around!', colors.light_green)
+
+def cast_fire_breath():
+    #find the player in range
+    player_character = closest_player_as_dragon(FIRE_BREATH_RANGE)
+    if player_character is None:
+        message('The dragon could not find you!')
+        return 'cancelled'
+
+    #cast it
+    message('A fire breath strikes you with a loud crash! The damage is '
+        + str(FIRE_BREATH_DAMAGE) + ' hit points.', colors.red)
+    player_character.fighter.take_damage(FIRE_BREATH_DAMAGE)
+
+
 
 #############################################
 # Initialization & Main Loop                #
@@ -803,3 +951,4 @@ while not tdl.event.is_window_closed():
             if obj.ai:
                 obj.ai.take_turn()
  
+
