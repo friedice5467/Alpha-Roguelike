@@ -1040,7 +1040,7 @@ def new_game():
     game_msgs = []
 
     #a warm welcoming message!
-    message('Welcome stranger! Prepare to perish in the Tombs of the Ancient Kings.', colors.red)
+    message('ALPHAROGUELIKE TEST RUN', colors.red)
 
 
 def play_game():
@@ -1082,11 +1082,11 @@ def main_menu():
         img.blit_2x(root, 0, 0)
  
         #show the game's title, and some credits!
-        title = 'TOMBS OF THE ANCIENT KINGS'
+        title = 'ALPHA ROGUELIKE'
         center = (SCREEN_WIDTH - len(title)) // 2
         root.draw_str(center, SCREEN_HEIGHT//2-4, title, bg=None, fg=colors.light_yellow)
  
-        title = 'By Jotaf'
+        title = 'By Friedice'
         center = (SCREEN_WIDTH - len(title)) // 2
         root.draw_str(center, SCREEN_HEIGHT-2, title, bg=None, fg=colors.light_yellow)
  
