@@ -1,8 +1,10 @@
 import tdl
 from random import randint
+from tcod import image_load
 import math
 import colors
 import textwrap
+import shelve
 #import combat_prop
 #import AI
 
@@ -608,6 +610,8 @@ def menu(header, options, width):
     for header_line in header.splitlines():
         header_wrapped.extend(textwrap.wrap(header_line, width))
     header_height = len(header_wrapped)
+    if header == '':
+        header_height = 0
     height = len(options) + header_height
 
     #create an offscreen console that represents the menu's window
@@ -638,6 +642,9 @@ def menu(header, options, width):
     key_char = key.char
     if key_char == '':
         key_char = ' ' # placeholder
+
+    if key.key == 'ENTER' and key.alt:  #(special case) Alt+Enter: toggle fullscreen
+        tdl.set_fullscreen(not tdl.get_fullscreen())
  
     #convert the ASCII code to an index; if it corresponds to an option, return it
     index = ord(key_char) - ord('a')
@@ -775,6 +782,9 @@ def player_move_or_attack(dx, dy):
     else:
         player.move(dx, dy)
         fov_recompute = True
+
+def msgbox(text, width=50):
+    menu(text, [], width)  #use menu() as a sort of "message box"
 
 def handle_keys():
     global playerx, playery
@@ -991,6 +1001,41 @@ con = tdl.Console(SCREEN_WIDTH, SCREEN_HEIGHT)
 panel = tdl.Console(SCREEN_WIDTH, SCREEN_HEIGHT)
 
 
+def main_menu():
+    img = image_load("C:\\Users\\danny\\Documents\\___Python Learning Coding\\Game\\Alpha Roguelike\\menu_background1.png")
+
+    while not tdl.event.is_window_closed():
+        #show the background image, at twice the regular console resolution
+        img.blit_2x(root, 0, 0)
+ 
+        #show the game's title, and some credits!
+        title = 'TOMBS OF THE ANCIENT KINGS'
+        center = (SCREEN_WIDTH - len(title)) // 2
+        root.draw_str(center, SCREEN_HEIGHT//2-4, title, bg=None, fg=colors.light_yellow)
+ 
+        title = 'By Jotaf'
+        center = (SCREEN_WIDTH - len(title)) // 2
+        root.draw_str(center, SCREEN_HEIGHT-2, title, bg=None, fg=colors.light_yellow)
+ 
+        #show options and wait for the player's choice
+        choice = menu('', ['Play a new game', 'Continue last game', 'Quit'], 24)
+ 
+        if choice == 0:  #new game
+            new_game()
+            play_game()
+        if choice == 1:  #load last game
+            try:
+                load_game()
+            except:
+                msgbox('\n No saved game to load.\n', 24)
+                continue
+            play_game()
+        elif choice == 2:  #quit
+            break
+
+
+
+
 def new_game():
     global player, inventory, game_msgs, game_state
 
@@ -1048,6 +1093,31 @@ def play_game():
             for obj in objects:
                 if obj.ai:
                     obj.ai.take_turn()
+
+
  
-new_game()
-play_game()
+def save_game():
+    #open a new empty shelve (possibly overwriting an old one) to write the game data
+    with shelve.open('savegame', 'n') as savefile:
+        savefile['my_map'] = my_map
+        savefile['objects'] = objects
+        savefile['player_index'] = objects.index(player)  #index of player in objects list
+        savefile['inventory'] = inventory
+        savefile['game_msgs'] = game_msgs
+        savefile['game_state'] = game_state
+
+def load_game():
+    #open the previously saved shelve and load the game data
+    global my_map, objects, player, inventory, game_msgs, game_state
+ 
+    with shelve.open('savegame', 'r') as savefile:
+        my_map = savefile['my_map']
+        objects = savefile['objects']
+        player = objects[savefile['player_index']]  #get index of player in objects list and access it
+        inventory = savefile['inventory']
+        game_msgs = savefile['game_msgs']
+        game_state = savefile['game_state']
+ 
+#new_game()
+#play_game()
+main_menu()
