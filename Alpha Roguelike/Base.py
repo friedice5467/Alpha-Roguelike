@@ -39,6 +39,8 @@ CONFUSE_NUM_TURNS = 10
 CONFUSE_RANGE = 8
 LIGHTNING_DAMAGE = 20
 LIGHTNING_RANGE = 5
+FIREBALL_RADIUS = 3
+FIREBALL_DAMAGE = 12
 FIRE_BREATH_DAMAGE = 12
 FIRE_BREATH_CHARGE = 0
 FIRE_BREATH_RANGE = 6
@@ -137,6 +139,10 @@ class GameObject:
         dy = other.y - self.y
         return math.sqrt(dx ** 2 + dy ** 2)
  
+    def distance(self, x, y):
+        #return the distance to some coordinates
+        return math.sqrt((x - self.x) ** 2 + (y - self.y) ** 2)
+
     def send_to_back(self):
         #make this object be drawn first, so all others appear above it if they're in the same tile.
         global objects
@@ -500,13 +506,18 @@ def place_objects(room):
                 item_component = Item(use_function=cast_heal)
  
                 item = GameObject(x, y, '!', 'healing potion', colors.violet, item=item_component)
-            elif item_dice < 700 + 150:
-                #create a lightning bolt scroll (15%)
+            elif item_dice < 700 + 100:
+                #create a lightning bolt scroll (10%)
                 item_component = Item(use_function = cast_lightning)
 
                 item = GameObject(x, y, '#', 'scroll of lightning bolt', colors.light_yellow, item=item_component)
+            elif item_dice < 70+10+10:
+                #create a fireball scroll (10% chance)
+                item_component = Item(use_function=cast_fireball)
+ 
+                item = GameObject(x, y, '#', 'scroll of fireball', colors.light_yellow, item=item_component)
             else:
-                #create a confuse scroll (15% chance)
+                #create a confuse scroll (10% chance)
                 item_component = Item(use_function=cast_confuse)
  
                 item = GameObject(x, y, '#', 'scroll of confusion', colors.light_yellow, item=item_component)
@@ -543,6 +554,48 @@ def get_names_under_mouse():
     #join the names, separated by commas
     names = ', '.join(names)
     return names.capitalize()
+
+def target_monster(max_range=None):
+    #returns a clicked monster inside FOV up to a range, or None if right-clicked
+    while True:
+        (x, y) = target_tile(max_range)
+        if x is None:  #player cancelled
+            return None
+ 
+        #return the first clicked monster, otherwise continue looping
+        for obj in objects:
+            if obj.x == x and obj.y == y and obj.fighter and obj != player:
+                return obj
+
+def target_tile(max_range=None):
+    #return the position of a tile left-clicked in player's FOV (optionally in 
+    #a range), or (None,None) if right-clicked.
+    global mouse_coord
+    while True:
+        #render the screen. this erases the inventory and shows the names of
+        #objects under the mouse.
+        tdl.flush()
+ 
+        clicked = False
+        for event in tdl.event.get():
+            if event.type == 'MOUSEMOTION':
+                mouse_coord = event.cell
+            if event.type == 'MOUSEDOWN' and event.button == 'LEFT':
+                clicked = True
+            elif ((event.type == 'MOUSEDOWN' and event.button == 'RIGHT') or 
+                  (event.type == 'KEYDOWN' and event.key == 'ESCAPE')):
+                return (None, None)
+        render_all()
+ 
+        #accept the target if the player clicked in FOV, and in case a range is 
+        #specified, if it's in that range
+        x = mouse_coord[0]
+        y = mouse_coord[1]
+        if (clicked and mouse_coord in visible_tiles and
+            (max_range is None or player.distance(x, y) <= max_range)):
+            return mouse_coord
+
+
 
 def menu(header, options, width):
     if len(options) > 26: raise ValueError('Cannot have a menu with more than 26 options.')
@@ -602,6 +655,14 @@ def inventory_menu(header):
     #if an item was chosen, return it
     if index is None or len(inventory) == 0: return None
     return inventory[index].item
+
+def drop(self):
+    #add to the map and remove from the player's ivnentory. also, place at the player's copordinates
+        objects.append(self.owner)
+        inventory.remove(self.owner)
+        self.owner.x = player.x
+        self.owner.y = player.y
+        message('You dropped a ' + self.owner.name + '.', colors.yellow)
 
 def render_all():
     global fov_recompute
@@ -793,6 +854,13 @@ def handle_keys():
                 if chosen_item is not None:
                     chosen_item.use()
 
+            if user_input.text == 'd':
+                #show the inventory; if an item is selected, drop it
+                chosen_item = inventory_menu('Press the key next to an item to' + 
+                'drop it, or any other to cancel.\n')
+                if chosen_item is not None:
+                    chosen_item.drop()
+
             return 'didnt-take-turn'
 
 def closest_monster(max_range):
@@ -855,22 +923,38 @@ def cast_heal():
     player.fighter.heal(HEAL_AMOUNT)
 
 def cast_lightning():
-    #find closest enemy (inside max range) and damage it
+    #find closest enemy (inside a maximum range) and damage it
     monster = closest_monster(LIGHTNING_RANGE)
-    if monster is None:
+    if monster is None:  #no enemy found within maximum range
         message('No enemy is close enough to strike.', colors.red)
         return 'cancelled'
-
-    #zap it
+ 
+    #zap it!
     message('A lighting bolt strikes the ' + monster.name + ' with a loud thunder! The damage is '
         + str(LIGHTNING_DAMAGE) + ' hit points.', colors.light_blue)
     monster.fighter.take_damage(LIGHTNING_DAMAGE)
 
+def cast_fireball():
+    #ask the player for a target tile to throw a fireball at
+    message('Left-click a target tile for the fireball, or right-click to cancel.', colors.light_cyan)
+    (x, y) = target_tile()
+    if x is None:
+        message('Cancelled')
+        return 'cancelled'
+    message('The fireball explodes, burning everything within ' + str(FIREBALL_RADIUS) + ' tiles!', colors.orange)
+
+    for obj in objects:  #damage every fighter in range, including the player
+        if obj.distance(x, y) <= FIREBALL_RADIUS and obj.fighter:
+            message('The ' + obj.name + ' gets burned for ' + str(FIREBALL_DAMAGE) + ' hit points.', colors.orange)
+            obj.fighter.take_damage(FIREBALL_DAMAGE)
+
 def cast_confuse():
-    #find the closest enemy in rage and confuse it
-    monster = closest_monster(CONFUSE_RANGE)
-    if monster is None: #no enemy found in range
-        message('No enemy is close enough to confuse.', colors.red)
+    #ask the player for a target to confuse
+    message('Left-click an enemy to confuse it, or right-click to cancel.', 
+            colors.light_cyan)
+    monster = target_monster(CONFUSE_RANGE)
+    if monster is None:
+        message('Cancelled')
         return 'cancelled'
 
     #replace the monster's AI with a "confused" one; after some turns it will restore the old AI
@@ -951,4 +1035,3 @@ while not tdl.event.is_window_closed():
             if obj.ai:
                 obj.ai.take_turn()
  
-
