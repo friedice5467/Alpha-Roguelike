@@ -353,8 +353,11 @@ def is_visible_tile(x, y):
         return True
  
 def make_map():
-    global my_map
+    global my_map, objects
  
+    #the list of objects with just the player
+    objects = [player]
+
     #fill map with "blocked" tiles
     my_map = [[ Tile(True)
         for y in range(MAP_HEIGHT) ]
@@ -987,51 +990,64 @@ tdl.setFPS(LIMIT_FPS)
 con = tdl.Console(SCREEN_WIDTH, SCREEN_HEIGHT)
 panel = tdl.Console(SCREEN_WIDTH, SCREEN_HEIGHT)
 
-#create object representing the player
-fighter_component = Fighter(hp=30, mp=10, defense=2, power=5, agility=2, death_function=player_death)
-player = GameObject(0, 0, '@', 'player', colors.white, blocks=True, fighter=fighter_component)
+
+def new_game():
+    global player, inventory, game_msgs, game_state
+
+    #create object representing the player
+    fighter_component = Fighter(hp=30, mp=10, defense=2, power=5, 
+                                agility=2, death_function=player_death)
+
+    player = GameObject(0, 0, '@', 'player', colors.white, blocks=True, 
+                            fighter=fighter_component)
+    
+
+    #generates map
+    make_map()
+
+
+    game_state = 'playing'
+
+    #creates an inventory
+    inventory = []
+
+    #create the list of game messages and their colors, start empty
+    game_msgs = []
+
+    #a warm welcoming message!
+    message('Welcome stranger! Prepare to perish in the Tombs of the Ancient Kings.', colors.red)
+
+
+def play_game():
+    global mouse_coord, fov_recompute
+
+    player_action = None
+    mouse_coord = (0, 0)
+    fov_recompute = True
+    con.clear() #unexplored areas start black (which is the default background color)
+
+
+    while not tdl.event.is_window_closed():
  
-#the list of objects starting with the player
-objects = [player]
-
-#generates map
-make_map()
-
-
-fov_recompute = True
-game_state = 'playing'
-player_action = None
-
-#create the list of game messages and their colors, start empty
-game_msgs = []
-
-#creates an inventory
-inventory = []
-
-#a warm welcoming message!
-message('Welcome stranger! Prepare to perish in the Tombs of the Ancient Kings.', colors.red)
-
-mouse_coord= (0, 0)
-
-while not tdl.event.is_window_closed():
+        #draw all objects in the list
+        render_all()
+        tdl.flush()
  
-    #draw all objects in the list
-    render_all()
- 
-    tdl.flush()
- 
-    #erase all objects at their old locations, before they move
-    for obj in objects:
-        obj.clear()
- 
-    #handle keys and exit game if needed
-    player_action = handle_keys()
-    if player_action == 'exit':
-        break
- 
-    #let monsters take their turn
-    if game_state == 'playing' and player_action != 'didnt-take-turn':
+        #erase all objects at their old locations, before they move
         for obj in objects:
-            if obj.ai:
-                obj.ai.take_turn()
+            obj.clear()
  
+        #handle keys and exit game if needed
+        player_action = handle_keys()
+        if player_action == 'exit':
+            save_game()
+            break
+ 
+        #let monsters take their turn
+        if game_state == 'playing' and player_action != 'didnt-take-turn':
+            for obj in objects:
+                if obj.ai:
+                    obj.ai.take_turn()
+ 
+new_game()
+play_game()
