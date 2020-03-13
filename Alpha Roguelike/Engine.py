@@ -1,14 +1,27 @@
 import tcod as libtcod
+
+from map_objects.game_map import *
+from render_function import *
+from entity import Entity
 from input_handler import handle_keys
 
 def main():
-    #size of screen width/height for console initilization 
+    #size of screen/map width/height for console initilization 
     screen_width = 80
     screen_height = 50
+    map_width = 80
+    map_height = 45
 
-    #keeps track of player position on the map
-    player_x = int(screen_width/2)
-    player_y = int(screen_height/2)
+    #defines colors
+    colors = {
+        'dark_wall': libtcod.Color(0, 0, 100),
+        'dark_ground': libtcod.Color(50, 50, 150)
+    }
+
+    #keeps track of position of player and npc on the map on the map
+    player = Entity(int(screen_width/2), int(screen_height/2), "@", libtcod.white)
+    npc = Entity(int(screen_width / 2 - 5), int(screen_height / 2), '@', libtcod.yellow)
+    entities = [npc, player]    
 
     #sets font 
     libtcod.console_set_custom_font(fontFile='arial12x12.png', flags=libtcod.FONT_TYPE_GRAYSCALE | libtcod.FONT_LAYOUT_TCOD)
@@ -17,7 +30,9 @@ def main():
     libtcod.console_init_root(w=screen_width, h=screen_height, title='libtcod alpha roguelike', fullscreen=False)
 
     #defines width/height as a console
-    con = libtcod.console_new(w=screen_width, h=screen_height)
+    con = libtcod.console_new(w=screen_width, h=screen_height)\
+    
+    game_map = GameMap(map_width, map_height)
 
     key = libtcod.Key()
     mouse = libtcod.Mouse()
@@ -27,14 +42,12 @@ def main():
         #checks for a key press
         libtcod.sys_check_for_event(mask=libtcod.EVENT_KEY_PRESS, k=key, m=mouse)
 
-        #initializes the map, spawns player based on (x,y), blit(draws) player on the map, flush, spawns player again based on (x,y)
-        libtcod.console_set_default_foreground(con=con, col=libtcod.white)
-        libtcod.console_put_char(con=con, x=player_x, y=player_y, c='@', flag=libtcod.BKGND_NONE)
-        libtcod.console_blit(src=con, x=0, y=0, w=screen_width, h=screen_height, dst=0, xdst=0, ydst=0)
+        #initializes render_all function from render_functions
+        render_all(con, entities, game_map, screen_width, screen_height, colors)
 
         libtcod.console_flush()
 
-        libtcod.console_put_char(con=con, x=player_x, y=player_y, c=' ', flag=libtcod.BKGND_NONE)
+        clear_all(con, entities)
 
         #imported from input_handler, handles input commands
         action = handle_keys(key)
@@ -45,8 +58,8 @@ def main():
         #changes player position based on input command, allows graceful exit, fullscreen toggle
         if move:
             dx, dy = move
-            player_x += dx
-            player_y += dy
+            if not game_map.is_blocked(player.x + dx, player.y + dy):
+                player.move(dx, dy)
 
         if exit:
             return True
@@ -58,3 +71,4 @@ def main():
 #initialize code
 if __name__ == '__main__':
     main()
+
