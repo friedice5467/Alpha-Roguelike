@@ -4,6 +4,7 @@ from map_objects.game_map import *
 from render_function import *
 from entity import Entity
 from input_handler import handle_keys
+from fov_functions import initialize_fov, recompute_fov
 
 def main():
     #size of screen/map width/height for console initilization 
@@ -12,15 +13,23 @@ def main():
     map_width = 80
     map_height = 45
 
-    #defines room variables
+    #defines the default room variables
     room_max_size = 10
     room_min_size = 6
     max_rooms = 30
 
+    #defines the default fov variables
+    fov_algorithm = 0
+    fov_light_walls = True
+    fov_radius = 10
+    
+
     #defines colors
     colors = {
         'dark_wall': libtcod.Color(0, 0, 100),
-        'dark_ground': libtcod.Color(50, 50, 150)
+        'dark_ground': libtcod.Color(50, 50, 150),
+        'light_wall': libtcod.Color(130, 110, 50),
+        'light_ground': libtcod.Color(200, 180, 50)
     }
 
     #keeps track of position of player and npc on the map on the map
@@ -40,6 +49,10 @@ def main():
     game_map = GameMap(map_width, map_height)
     game_map.make_map(max_rooms, room_min_size, room_max_size, map_width, map_height, player)
 
+    fov_recompute = True
+
+    fov_map = initialize_fov(game_map)
+
     key = libtcod.Key()
     mouse = libtcod.Mouse()
 
@@ -48,8 +61,14 @@ def main():
         #checks for a key press
         libtcod.sys_check_for_event(mask=libtcod.EVENT_KEY_PRESS, k=key, m=mouse)
 
+        #checks for fov refresh and refreshes
+        if fov_recompute:
+            recompute_fov(fov_map, player.x, player.y, fov_radius, fov_light_walls, fov_algorithm)
+
         #initializes render_all function from render_functions
-        render_all(con, entities, game_map, screen_width, screen_height, colors)
+        render_all(con, entities, game_map, fov_map, fov_recompute, screen_width, screen_height, colors)
+
+        fov_recompute = False
 
         libtcod.console_flush()
 
@@ -67,6 +86,8 @@ def main():
             if not game_map.is_blocked(player.x + dx, player.y + dy):
                 player.move(dx, dy)
 
+                fov_recompute = True
+
         if exit:
             return True
 
@@ -77,6 +98,7 @@ def main():
 #initialize code
 if __name__ == '__main__':
     main()
+
 
 
 
