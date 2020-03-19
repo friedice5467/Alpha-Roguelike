@@ -2,7 +2,7 @@ import tcod as libtcod
 
 from map_objects.game_map import *
 from render_function import *
-from entity import Entity
+from entity import Entity, get_blocking_entities_at_location
 from input_handler import handle_keys
 from fov_functions import initialize_fov, recompute_fov
 
@@ -23,6 +23,8 @@ def main():
     fov_light_walls = True
     fov_radius = 10
     
+    #defines the max amount of monsters per room
+    max_monsters_per_room = 3
 
     #defines colors
     colors = {
@@ -32,10 +34,9 @@ def main():
         'light_ground': libtcod.Color(200, 180, 50)
     }
 
-    #keeps track of position of player and npc on the map on the map
-    player = Entity(int(screen_width/2), int(screen_height/2), "@", libtcod.white)
-    npc = Entity(int(screen_width / 2 - 5), int(screen_height / 2), '@', libtcod.yellow)
-    entities = [npc, player]    
+    #keeps track of position of player and other objects on the map on the map
+    player = Entity(0, 0, '@', libtcod.white, 'player', blocks=True)
+    entities = [player] 
 
     #sets font 
     libtcod.console_set_custom_font(fontFile='arial12x12.png', flags=libtcod.FONT_TYPE_GRAYSCALE | libtcod.FONT_LAYOUT_TCOD)
@@ -47,7 +48,7 @@ def main():
     con = libtcod.console_new(w=screen_width, h=screen_height)\
     
     game_map = GameMap(map_width, map_height)
-    game_map.make_map(max_rooms, room_min_size, room_max_size, map_width, map_height, player)
+    game_map.make_map(max_rooms, room_min_size, room_max_size, map_width, map_height, player, entities, max_monsters_per_room)
 
     fov_recompute = True
 
@@ -83,10 +84,18 @@ def main():
         #changes player position based on input command, allows graceful exit, fullscreen toggle
         if move:
             dx, dy = move
-            if not game_map.is_blocked(player.x + dx, player.y + dy):
-                player.move(dx, dy)
+            destination_x = player.x + dx
+            destination_y = player.y + dy
 
-                fov_recompute = True
+            if not game_map.is_blocked(destination_x, destination_y):
+                target = get_blocking_entities_at_location(entities, destination_x, destination_y)
+
+                if target:
+                    print('You kick the ' + target.name + ' in the shins, much to its annoyance!')
+                else:
+                    player.move(dx, dy)
+
+                    fov_recompute = True
 
         if exit:
             return True
@@ -98,7 +107,5 @@ def main():
 #initialize code
 if __name__ == '__main__':
     main()
-
-
 
 
