@@ -1,3 +1,6 @@
+import tcod as libtcod
+
+from entity import Entity
 from map_objects.tile import Tile
 from map_objects.rectangle import Rect
 from random import randint
@@ -15,7 +18,8 @@ class GameMap:
         return tiles
 
 
-    def make_map(self, max_rooms, room_min_size, room_max_size, map_width, map_height, player):
+    def make_map(self, max_rooms, room_min_size, room_max_size, map_width, map_height, player, entities,
+                 max_monsters_per_room):
         rooms = []
         num_rooms = 0
 
@@ -64,6 +68,8 @@ class GameMap:
                         self.create_v_tunnel(prev_y, new_y, prev_x)
                         self.create_h_tunnel(prev_x, new_x, new_y)
 
+                self.place_entities(new_room, entities, max_monsters_per_room)
+
                 #finally, append the new room to the list
                 rooms.append(new_room)
                 num_rooms += 1
@@ -86,6 +92,25 @@ class GameMap:
             self.tiles[x][y].blocked = False
             self.tiles[x][y].block_sight = False
 
+    def place_entities(self, room, entities, max_monsters_per_room):
+        # Get a random number of monsters
+        number_of_monsters = randint(0, max_monsters_per_room)
+        choice = randint(0, 1000)
+
+        for i in range(number_of_monsters):
+            # Choose a random location in the room
+            x = randint(room.x1 + 1, room.x2 - 1)
+            y = randint(room.y1 + 1, room.y2 - 1)
+
+            if not any([entity for entity in entities if entity.x == x and entity.y == y]):
+                if choice < 955:
+                    #create an orc at 95.5% chance
+                    monster = Entity(x, y, 'o', libtcod.desaturated_green, 'Orc', blocks = True)
+                else:
+                    #create a dragon at .5% chance
+                    monster = Entity(x, y, 'D', libtcod.desaturated_amber, 'Dragon', blocks = True)
+
+                entities.append(monster)
 
 
     def is_blocked(self, x, y):
