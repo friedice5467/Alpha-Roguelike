@@ -118,5 +118,3 @@ def main():
 #initialize code
 if __name__ == '__main__':
     main()
-
-
