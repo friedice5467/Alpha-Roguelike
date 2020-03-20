@@ -3,6 +3,7 @@ import tcod as libtcod
 from map_objects.game_map import *
 from render_function import *
 from entity import Entity, get_blocking_entities_at_location
+from game_states import GameStates
 from input_handler import handle_keys
 from fov_functions import initialize_fov, recompute_fov
 
@@ -57,6 +58,8 @@ def main():
     key = libtcod.Key()
     mouse = libtcod.Mouse()
 
+    game_state = GameStates.PLAYERS_TURN
+
     #main game loop
     while not libtcod.console_is_window_closed():
         #checks for a key press
@@ -82,7 +85,7 @@ def main():
         fullscreen = action.get('fullscreen')
 
         #changes player position based on input command, allows graceful exit, fullscreen toggle
-        if move:
+        if move and game_state == GameStates.PLAYERS_TURN:
             dx, dy = move
             destination_x = player.x + dx
             destination_y = player.y + dy
@@ -97,12 +100,20 @@ def main():
 
                     fov_recompute = True
 
+                game_state = GameStates.ENEMY_TURN
+
         if exit:
             return True
 
         if fullscreen:
             libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
 
+        if game_state == GameStates.ENEMY_TURN:
+            for entity in entities:
+                if entity != player:
+                    print('The ' + entity.name + ' ponders the meaning of its existence.')
+
+            game_state = GameStates.PLAYERS_TURN
 
 #initialize code
 if __name__ == '__main__':
