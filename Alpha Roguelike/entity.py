@@ -1,4 +1,4 @@
-
+import math
 
 class Entity:
     """
@@ -25,6 +25,23 @@ class Entity:
         #positions the entity by given amount
         self.x += dx
         self.y += dy
+
+    def move_towards(self, target_x, target_y, game_map, entities):
+        dx = target_x - self.x
+        dy = target_y - self.y
+        distance = math.sqrt(dx ** 2 + dy ** 2)
+
+        dx = int(round(dx / distance))
+        dy = int(round(dy / distance))
+
+        if not (game_map.is_blocked(self.x + dx, self.y + dy) or
+                    get_blocking_entities_at_location(entities, self.x + dx, self.y + dy)):
+            self.move(dx, dy)
+
+    def distance_to(self, other):
+        dx = other.x - self.x
+        dy = other.y - self.y
+        return math.sqrt(dx ** 2 + dy ** 2)
 
 def get_blocking_entities_at_location(entities, destination_x, destination_y):
     for entity in entities:
