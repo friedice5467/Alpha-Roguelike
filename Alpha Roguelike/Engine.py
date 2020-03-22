@@ -1,5 +1,6 @@
 import tcod as libtcod
 
+from components.fighter import Fighter
 from map_objects.game_map import *
 from render_function import *
 from entity import Entity, get_blocking_entities_at_location
@@ -36,8 +37,9 @@ def main():
     }
 
     #keeps track of position of player and other objects on the map on the map
-    player = Entity(0, 0, '@', libtcod.white, 'player', blocks=True)
-    entities = [player] 
+    fighter_component = Fighter(hp=30, defense=2, power=5)
+    player = Entity(0, 0, '@', libtcod.white, 'Player', blocks=True, fighter=fighter_component)
+    entities = [player]
 
     #sets font 
     libtcod.console_set_custom_font(fontFile='arial12x12.png', flags=libtcod.FONT_TYPE_GRAYSCALE | libtcod.FONT_LAYOUT_TCOD)
@@ -110,8 +112,8 @@ def main():
 
         if game_state == GameStates.ENEMY_TURN:
             for entity in entities:
-                if entity != player:
-                    print('The ' + entity.name + ' ponders the meaning of its existence.')
+                if entity.ai:
+                    entity.ai.take_turn()
 
             game_state = GameStates.PLAYERS_TURN
 
