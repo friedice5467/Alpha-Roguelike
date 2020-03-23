@@ -1,5 +1,7 @@
 import tcod as libtcod
 
+from components.ai import BasicMonster
+from components.fighter import Fighter
 from entity import Entity
 from map_objects.tile import Tile
 from map_objects.rectangle import Rect
@@ -104,11 +106,15 @@ class GameMap:
 
             if not any([entity for entity in entities if entity.x == x and entity.y == y]):
                 if choice < 955:
+                    fighter_component = Fighter(hp=10, defense=0, power=3)
+                    ai_component = BasicMonster()
                     #create an orc at 95.5% chance
-                    monster = Entity(x, y, 'o', libtcod.desaturated_green, 'Orc', blocks = True)
+                    monster = Entity(x, y, 'o', libtcod.desaturated_green, 'Orc', blocks=True,
+                                     fighter=fighter_component, ai=ai_component)
                 else:
                     #create a dragon at .5% chance
-                    monster = Entity(x, y, 'D', libtcod.desaturated_amber, 'Dragon', blocks = True)
+                    monster = Entity(x, y, 'd', libtcod.darker_red, 'Dragon', blocks=True, fighter=fighter_component,
+                                     ai=ai_component)
 
                 entities.append(monster)
 
