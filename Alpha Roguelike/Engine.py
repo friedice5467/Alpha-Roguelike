@@ -9,13 +9,24 @@ from game_states import GameStates
 from death_functions import kill_monster, kill_player
 from input_handler import handle_keys
 from fov_functions import initialize_fov, recompute_fov
+from game_messages import Message, MessageLog
+
 
 def main():
     #size of screen/map width/height for console initilization 
     screen_width = 80
     screen_height = 50
     map_width = 80
-    map_height = 45
+    map_height = 43
+
+    #gui 
+    bar_width = 20
+    panel_height = 7
+    panel_y = screen_height - panel_height
+
+    message_x = bar_width + 2
+    message_width = screen_width - bar_width - 2
+    message_height = panel_height - 1
 
     #defines the default room variables
     room_max_size = 10
@@ -39,7 +50,7 @@ def main():
     }
 
     #keeps track of position of player and other objects on the map on the map
-    fighter_component = Fighter(hp=30, defense=2, power=5)
+    fighter_component = Fighter(hp=30, stamina = 30, mana=10, defense=2, power=5)
     player = Entity(0, 0, '@', libtcod.white, 'Player', blocks=True, render_order=RenderOrder.ACTOR, fighter=fighter_component)
     entities = [player]
 
@@ -50,7 +61,10 @@ def main():
     libtcod.console_init_root(w=screen_width, h=screen_height, title='libtcod alpha roguelike', fullscreen=False)
 
     #defines width/height as a console
-    con = libtcod.console_new(w=screen_width, h=screen_height)\
+    con = libtcod.console_new(w=screen_width, h=screen_height)
+
+    #creates a new consolewhich holds hp bar and message log
+    panel = libtcod.console_new(screen_width, panel_height)
     
     game_map = GameMap(map_width, map_height)
     game_map.make_map(max_rooms, room_min_size, room_max_size, map_width, map_height, player, entities, max_monsters_per_room)
@@ -58,6 +72,8 @@ def main():
     fov_recompute = True
 
     fov_map = initialize_fov(game_map)
+
+    message_log = MessageLog(message_x, message_width, message_height)
 
     key = libtcod.Key()
     mouse = libtcod.Mouse()
@@ -67,14 +83,15 @@ def main():
     #main game loop
     while not libtcod.console_is_window_closed():
         #checks for a key press
-        libtcod.sys_check_for_event(mask=libtcod.EVENT_KEY_PRESS, k=key, m=mouse)
+        libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS | libtcod.EVENT_MOUSE, key, mouse)
 
         #checks for fov refresh and refreshes
         if fov_recompute:
             recompute_fov(fov_map, player.x, player.y, fov_radius, fov_light_walls, fov_algorithm)
 
         #initializes render_all function from render_functions
-        render_all(con, entities, player, game_map, fov_map, fov_recompute, screen_width, screen_height, colors)
+        render_all(con, panel, entities, player, game_map, fov_map, fov_recompute, message_log, screen_width,
+                   screen_height, bar_width, panel_height, panel_y, mouse, colors)
 
         fov_recompute = False
 
@@ -120,7 +137,7 @@ def main():
             dead_entity = player_turn_results.get('dead')
 
             if message:
-                print(message)
+                message_log.add_message(message)
             
             if dead_entity:
 
@@ -129,7 +146,7 @@ def main():
                 else:
                     message = kill_monster(dead_entity) 
 
-                print(message)
+                message_log.add_message(message)
 
         if game_state == GameStates.ENEMY_TURN:
             for entity in entities:
@@ -141,7 +158,7 @@ def main():
                         dead_entity = enemy_turn_results.get('dead')
 
                         if message:
-                            print(message)
+                            message_log.add_message(message)
                         
                         if dead_entity:
                             if dead_entity == player:
@@ -149,7 +166,7 @@ def main():
                             else:
                                 message = kill_monster(dead_entity)
 
-                            print(message)
+                            message_log.add_message(message)
 
                             if game_state == GameStates.PLAYER_DEAD:
                                 break
