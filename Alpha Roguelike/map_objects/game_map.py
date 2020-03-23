@@ -108,13 +108,13 @@ class GameMap:
 
             if not any([entity for entity in entities if entity.x == x and entity.y == y]):
                 if choice < 955:
-                    fighter_component = Fighter(hp=10, defense=0, power=3)
+                    fighter_component = Fighter(hp=10, stamina=10,mana=1, defense=0, power=3)
                     ai_component = BasicMonster()
                     #create an orc at 95.5% chance
                     monster = Entity(x, y, 'o', libtcod.desaturated_green, 'Orc', blocks=True,
                                     render_order=RenderOrder.ACTOR, fighter=fighter_component, ai=ai_component)
                 else:
-                    fighter_component = Fighter(hp=100, defense=3, power=6)
+                    fighter_component = Fighter(hp=100,stamina=100, mana=100, defense=3, power=6)
                     ai_component = BasicMonster()
                     #create a dragon at .5% chance
                     monster = Entity(x, y, 'd', libtcod.darker_red, 'Dragon', blocks=True, 
