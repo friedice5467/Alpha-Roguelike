@@ -3,6 +3,7 @@ import tcod as libtcod
 from components.ai import BasicMonster
 from components.fighter import Fighter
 from entity import Entity
+from render_function import RenderOrder
 from map_objects.tile import Tile
 from map_objects.rectangle import Rect
 from random import randint
@@ -104,17 +105,20 @@ class GameMap:
             x = randint(room.x1 + 1, room.x2 - 1)
             y = randint(room.y1 + 1, room.y2 - 1)
 
+
             if not any([entity for entity in entities if entity.x == x and entity.y == y]):
                 if choice < 955:
                     fighter_component = Fighter(hp=10, defense=0, power=3)
                     ai_component = BasicMonster()
                     #create an orc at 95.5% chance
                     monster = Entity(x, y, 'o', libtcod.desaturated_green, 'Orc', blocks=True,
-                                     fighter=fighter_component, ai=ai_component)
+                                    render_order=RenderOrder.ACTOR, fighter=fighter_component, ai=ai_component)
                 else:
+                    fighter_component = Fighter(hp=100, defense=3, power=6)
+                    ai_component = BasicMonster()
                     #create a dragon at .5% chance
-                    monster = Entity(x, y, 'd', libtcod.darker_red, 'Dragon', blocks=True, fighter=fighter_component,
-                                     ai=ai_component)
+                    monster = Entity(x, y, 'd', libtcod.darker_red, 'Dragon', blocks=True, 
+                                    render_order=RenderOrder.ACTOR, fighter=fighter_component, ai=ai_component)
 
                 entities.append(monster)
 
