@@ -5,7 +5,7 @@ from components.fighter import Fighter
 from components.item import Item
 from entity import Entity
 from game_messages import Message
-from item_functions import cast_fireball, cast_lightning, heal
+from item_functions import cast_fireball, cast_confuse, cast_lightning, heal
 from render_function import RenderOrder
 from map_objects.tile import Tile
 from map_objects.rectangle import Rect
@@ -136,21 +136,28 @@ class GameMap:
                 item_chance = randint(0, 1000)
                 
                 if item_chance < 700:
-                    #spawns healing potion
+                    #spawns healing potion at 70%
                     item_component = Item(use_function=heal, amount=4)
                     item = Entity(x, y, '!', libtcod.violet, 'Healing Potion', render_order=RenderOrder.ITEM,
                                 item=item_component)
                 
-                elif item_chance < 700 + 150:
-                    #spawns fireball scroll
+                elif item_chance < 700 + 100:
+                    #spawns fireball scroll at 10%
                     item_component = Item(use_function=cast_fireball, targeting=True, targeting_message=Message(
                         'Left-click a target tile for the fireball, or right-click to cancel.', libtcod.light_cyan),
                                           damage=12, radius=3)
                     item = Entity(x, y, '#', libtcod.red, 'Fireball Scroll', render_order=RenderOrder.ITEM,
                                   item=item_component)
 
+                elif item_chance < 700 + 100 + 100:
+                    #spawns confuse scroll at 10%
+                    item_component = Item(use_function=cast_confuse, targeting=True, targeting_message=Message(
+                        'Left-click an enemy to confuse it, or right-click to cancel.', libtcod.light_cyan))
+                    item = Entity(x, y, '#', libtcod.light_pink, 'Confusion Scroll', render_order=RenderOrder.ITEM,
+                                  item=item_component)
+
                 else:
-                    #spawns lightning scroll
+                    #spawns lightning scroll at 10%
                     item_component = Item(use_function=cast_lightning, damage=20, maximum_range=5)
                     item = Entity(x, y, '#', libtcod.yellow, 'Lightning Scroll', render_order=RenderOrder.ITEM,
                                   item=item_component)
