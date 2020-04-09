@@ -112,7 +112,9 @@ def handle_main_menu(key):
         return {'new_game': True}
     elif key_char == 'b':
         return {'load_game': True}
-    elif key_char == 'c' or  key.vk == libtcod.KEY_ESCAPE:
+    elif key_char == 'c':
+        return {'save_game': True}
+    elif key_char == 'd' or  key.vk == libtcod.KEY_ESCAPE:
         return {'exit': True}
 
     return {}
