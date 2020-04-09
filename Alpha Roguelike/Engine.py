@@ -241,6 +241,7 @@ def main():
 
             new_game = action.get('new_game')
             load_saved_game = action.get('load_game')
+            save_game_menu = action.get('save_game')
             exit_game = action.get('exit')
 
             if show_load_error_message and (new_game or load_saved_game or exit_game):
@@ -250,6 +251,8 @@ def main():
                 game_state = GameStates.PLAYERS_TURN
 
                 show_main_menu = False
+            elif save_game_menu:
+                save_game(player, entities, game_map, message_log, game_state)
             elif load_saved_game:
                 try:
                     player, entities, game_map, message_log, game_state = load_game()
