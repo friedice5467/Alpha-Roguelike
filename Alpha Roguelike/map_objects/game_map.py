@@ -18,7 +18,7 @@ class GameMap:
         self.height = height
         self.tiles = self.initialize_tiles()
 
-        self.dungeon_level = self.dungeon_level
+        self.dungeon_level = dungeon_level
 
     def initialize_tiles(self):
         tiles = [[Tile(True) for y in range(self.height)] for x in range(self.width)]
@@ -183,3 +183,16 @@ class GameMap:
             return True
 
         return False
+
+    def next_floor(self, player, message_log, constants):
+        self.dungeon_level += 1
+        entities = [player]
+
+        self.tiles = self.initialize_tiles()
+        self.make_map(constants['max_rooms'], constants['room_min_size'], constants['room_max_size'],
+                      constants['map_width'], constants['map_height'], player, entities,
+                      constants['max_monsters_per_room'], constants['max_items_per_room'])
+
+        message_log.add_message(Message('You travel to the next floor.', libtcod.light_violet))
+
+        return entities
