@@ -4,7 +4,7 @@ from game_messages import Message
 
 
 class Fighter:
-    def __init__(self, hp, stamina, mana, defense, power):
+    def __init__(self, hp, stamina, mana, defense, power, xp=0):
         self.max_hp = hp
         self.hp = hp
         self.max_stamina = stamina
@@ -13,6 +13,8 @@ class Fighter:
         self.mana = mana
         self.defense = defense
         self.power = power
+        self.xp = xp
+
 
     def take_damage(self, amount):
         results = []
