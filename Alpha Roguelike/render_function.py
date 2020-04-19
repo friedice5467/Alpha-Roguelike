@@ -4,7 +4,7 @@ from enum import Enum, auto
 
 from game_states import GameStates
 
-from menu import inventory_menu
+from menu import character_screen, inventory_menu, level_up_menu
 
 class RenderOrder(Enum):
     STAIRS = auto()
@@ -78,13 +78,13 @@ def render_all(con, panel, entities, player, game_map, fov_map, fov_recompute, m
     render_bar(panel, 1, 1, bar_width, 'HP', player.fighter.hp, player.fighter.max_hp,
                libtcod.light_red, libtcod.darker_red)
 
-    render_bar(panel, 1, 3, bar_width, 'SP', player.fighter.stamina, player.fighter.max_stamina,
+    render_bar(panel, 1, 3, bar_width, 'SP', player.fighter.sp, player.fighter.max_sp,
                libtcod.green, libtcod.darkest_green)
 
-    render_bar(panel, 1, 5, bar_width, 'MP', player.fighter.mana, player.fighter.max_mana,
+    render_bar(panel, 1, 5, bar_width, 'MP', player.fighter.mp, player.fighter.max_mp,
                libtcod.light_blue, libtcod.dark_blue)
 
-    libtcod.console_print_ex(panel, 1, 3, libtcod.BKGND_NONE, libtcod.LEFT,
+    libtcod.console_print_ex(panel, 62, 5, libtcod.BKGND_NONE, libtcod.LEFT,
                              'Dungeon level: {0}'.format(game_map.dungeon_level))
 
     libtcod.console_set_default_foreground(panel, libtcod.light_gray)
@@ -100,6 +100,12 @@ def render_all(con, panel, entities, player, game_map, fov_map, fov_recompute, m
             inventory_title = 'Press the key next to an item to drop it, or Esc to cancel.\n'
 
         inventory_menu(con, inventory_title, player.inventory, 50, screen_width, screen_height)
+
+    elif game_state == GameStates.LEVEL_UP:
+        level_up_menu(con, 'Level up! Choose a stat to raise:', player, 40, screen_width, screen_height)
+
+    elif game_state == GameStates.CHARACTER_SCREEN:
+        character_screen(player, 30, 10, screen_width, screen_height)
         
 def clear_all(con, entities):
     for entity in entities:
