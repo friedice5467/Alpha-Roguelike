@@ -10,6 +10,7 @@ from item_functions import cast_fireball, cast_confuse, cast_lightning, heal
 from render_function import RenderOrder
 from map_objects.tile import Tile
 from map_objects.rectangle import Rect
+from random_utils import from_dungeon_level, random_choice_from_dict
 from random import randint
 
 class GameMap:
@@ -112,11 +113,24 @@ class GameMap:
             self.tiles[x][y].blocked = False
             self.tiles[x][y].block_sight = False
 
-    def place_entities(self, room, entities, max_monsters_per_room, max_items_per_room):
+    def place_entities(self, room, entities):
+        max_monsters_per_room = from_dungeon_level([[2, 1], [3, 4], [5, 6]], self.dungeon_level)
+        max_items_per_room = from_dungeon_level([[1, 1], [2, 4]], self.dungeon_level)
+
         # Get a random number of monsters
         number_of_monsters = randint(0, max_monsters_per_room)
         number_of_items = randint(0, max_items_per_room)
-        choice = randint(0, 1000)
+        
+        monster_chances = {'goblin':500, 
+        'orc':350, 
+        'uruk': 100, 
+        'infirnimp':49, 
+        'dragon': from_dungeon_level([100,10], self.dungeon_level)}
+
+        item_chances = {'healing_potion': 70, 
+        'lightning_scroll': 10, 
+        'fireball_scroll': 10, 
+        'confusion_scroll': 10}
 
         for i in range(number_of_monsters):
             # Choose a random location in the room
@@ -125,27 +139,28 @@ class GameMap:
 
 
             if not any([entity for entity in entities if entity.x == x and entity.y == y]):
+                monster_choice = random_choice_from_dict(monster_chances)
 
                 #monster generation %
-                if choice < 500:
+                if monster_choice == 'goblin':
                     fighter_component = Fighter(hp=10, sp=10,mp=1, defense=0, power=3, xp=30)
                     ai_component = BasicMonster()
                     #create an goblin at 50.0% chance
                     monster = Entity(x, y, 'g', libtcod.light_green, 'Goblin', blocks=True,
                                     render_order=RenderOrder.ACTOR, fighter=fighter_component, ai=ai_component)
-                elif choice < 500 + 350:
+                elif monster_choice == 'orc':
                     fighter_component = Fighter(hp=20, sp=10, mp=1, defense=1, power=4, xp=50)
                     ai_component=BasicMonster()
                     #create an orc at 35.0% chance
                     monster = Entity(x, y, 'o', libtcod.desaturated_green, 'Orc', blocks=True, 
                                     render_order=RenderOrder.ACTOR, fighter=fighter_component, ai=ai_component)
-                elif choice < 500 + 350 + 100:
+                elif monster_choice == 'uruk':
                     fighter_component = Fighter(hp=35, sp=20, mp=1, defense=1, power=5, xp=100)
                     ai_component=BasicMonster()
                     #create an uruk at 10.0% chance
                     monster = Entity(x, y, 'u', libtcod.darkest_green, 'uruk', blocks=True, 
                                     render_order=RenderOrder.ACTOR, fighter=fighter_component, ai=ai_component)
-                elif choice < 500 + 350 + 100 + 49:
+                elif monster_choice == 'infirnimp':
                     fighter_component = Fighter(hp=40, sp=30, mp=10, defense=3, power=6, xp=200)
                     ai_component=BasicMonster()
                     #create an infernimp at 4.9% chance
@@ -165,15 +180,15 @@ class GameMap:
             y = randint(room.y1 + 1, room.y2 - 1)
 
             if not any([entity for entity in entities if entity.x == x and entity.y == y]):
-                item_chance = randint(0, 1000)
+                item_choice = random_choice_from_dict(item_chances)
                 
-                if item_chance < 700:
+                if item_choice == 'healing_potion':
                     #spawns healing potion at 70%
                     item_component = Item(use_function=heal, amount=4)
                     item = Entity(x, y, '!', libtcod.violet, 'Healing Potion', render_order=RenderOrder.ITEM,
                                 item=item_component)
                 
-                elif item_chance < 700 + 100:
+                elif item_choice == 'fireball_scroll':
                     #spawns fireball scroll at 10%
                     item_component = Item(use_function=cast_fireball, targeting=True, targeting_message=Message(
                         'Left-click a target tile for the fireball, or right-click to cancel.', libtcod.light_cyan),
@@ -181,7 +196,7 @@ class GameMap:
                     item = Entity(x, y, '#', libtcod.red, 'Fireball Scroll', render_order=RenderOrder.ITEM,
                                   item=item_component)
 
-                elif item_chance < 700 + 100 + 100:
+                elif item_choice == 'confusion_scroll':
                     #spawns confuse scroll at 10%
                     item_component = Item(use_function=cast_confuse, targeting=True, targeting_message=Message(
                         'Left-click an enemy to confuse it, or right-click to cancel.', libtcod.light_cyan))
