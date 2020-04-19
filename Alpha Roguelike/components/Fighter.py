@@ -4,17 +4,16 @@ from game_messages import Message
 
 
 class Fighter:
-    def __init__(self, hp, stamina, mana, defense, power, xp=0):
+    def __init__(self, hp, sp, mp, defense, power, xp=0):
         self.max_hp = hp
         self.hp = hp
-        self.max_stamina = stamina
-        self.stamina = stamina
-        self.max_mana = mana
-        self.mana = mana
+        self.max_sp = sp
+        self.sp = sp
+        self.max_mp = mp
+        self.mp = mp
         self.defense = defense
         self.power = power
         self.xp = xp
-
 
     def take_damage(self, amount):
         results = []
@@ -22,7 +21,7 @@ class Fighter:
         self.hp -= amount
 
         if self.hp <= 0:
-            results.append({'dead': self.owner})
+            results.append({'dead': self.owner, 'xp': self.xp})
 
         return results
 
