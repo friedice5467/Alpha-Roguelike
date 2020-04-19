@@ -128,31 +128,31 @@ class GameMap:
 
                 #monster generation %
                 if choice < 500:
-                    fighter_component = Fighter(hp=10, stamina=10,mana=1, defense=0, power=3, xp=30)
+                    fighter_component = Fighter(hp=10, sp=10,mp=1, defense=0, power=3, xp=30)
                     ai_component = BasicMonster()
                     #create an goblin at 50.0% chance
                     monster = Entity(x, y, 'g', libtcod.light_green, 'Goblin', blocks=True,
                                     render_order=RenderOrder.ACTOR, fighter=fighter_component, ai=ai_component)
                 elif choice < 500 + 350:
-                    fighter_component = Fighter(hp=20, stamina=10, mana=1, defense=1, power=4, xp=50)
+                    fighter_component = Fighter(hp=20, sp=10, mp=1, defense=1, power=4, xp=50)
                     ai_component=BasicMonster()
                     #create an orc at 35.0% chance
-                    monster = Entity(x, y, 'o', libtcod.desatured_green, 'Orc', blocks=True, 
-                                    render_order=RenderOrder.Actor, fighter=fighter_component, ai=ai_component)
+                    monster = Entity(x, y, 'o', libtcod.desaturated_green, 'Orc', blocks=True, 
+                                    render_order=RenderOrder.ACTOR, fighter=fighter_component, ai=ai_component)
                 elif choice < 500 + 350 + 100:
-                    fighter_component = Fighter(hp=35, stamina=20, mana=1, defense=1, power=5, xp=100)
+                    fighter_component = Fighter(hp=35, sp=20, mp=1, defense=1, power=5, xp=100)
                     ai_component=BasicMonster()
                     #create an uruk at 10.0% chance
-                    monster = Entity(x, y, 'u', libtcod.desatured_green, 'uruk', blocks=True, 
-                                    render_order=RenderOrder.Actor, fighter=fighter_component, ai=ai_component)
+                    monster = Entity(x, y, 'u', libtcod.darkest_green, 'uruk', blocks=True, 
+                                    render_order=RenderOrder.ACTOR, fighter=fighter_component, ai=ai_component)
                 elif choice < 500 + 350 + 100 + 49:
-                    fighter_component = Fighter(hp=40, stamina=30, mana=10, defense=3, power=6, xp=200)
+                    fighter_component = Fighter(hp=40, sp=30, mp=10, defense=3, power=6, xp=200)
                     ai_component=BasicMonster()
                     #create an infernimp at 4.9% chance
-                    monster = Entity(x, y, 'Infernimp', libtcod.desatured_green, 'Infernimp', blocks=True, 
-                                    render_order=RenderOrder.Actor, fighter=fighter_component, ai=ai_component)
+                    monster = Entity(x, y, 'Infernimp', libtcod.amber, 'Infernimp', blocks=True, 
+                                    render_order=RenderOrder.ACTOR, fighter=fighter_component, ai=ai_component)
                 else:
-                    fighter_component = Fighter(hp=1000,stamina=100, mana=1000, defense=30, power=60, xp=30000)
+                    fighter_component = Fighter(hp=1000,sp=100, mp=1000, defense=30, power=60, xp=30000)
                     ai_component = BasicMonster()
                     #create a dragon at .1% chance
                     monster = Entity(x, y, 'd', libtcod.darker_red, 'Dragon', blocks=True, 
